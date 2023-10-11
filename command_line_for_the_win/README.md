@@ -1,5 +1,6 @@
 # Command line for the win
 * Using SFTP File Transfer .
+
 ***step 1: Open a Terminal***
 
 Open a terminal window on your local machine. You can typically find the terminal application in your system's applications or utilities.

@@ -1,23 +1,32 @@
-global
-        log /dev/log    local0
-	stats socket /run/haproxy/admin.sock mode 660 level admin
+# Configure HAProxy to redirect HTTP traffic to HTTPS
+cat > /etc/haproxy/haproxy.cfg <<EOL
+frontend www-frontend
+bind *:80
+mode http
+option forwardfor
+reqadd X-Forwarded-Proto:\ https
+http-request set-header X-Forwarded-Port %[dst_port]
+redirect scheme https if !{ ssl_fc }
 
-defaults
-        log     global
-        mode    http
-        option  httplog
-	timeout connect  10s
-	timeout client  30s
-	timeout server  30s
+frontend www-frontend-ssl
+bind *:443 ssl crt /etc/letsencrypt/live/www.holberton.online/fullchain.pem
 
-frontend th3gr00t-tech-frontend
-	bind *:80
-	bind *:443 ssl crt /etc/haproxy/certs/th3gr00t.tech.pem
-	http-request redirect scheme https code 301 unless { ssl_fc }
-	http-request set-header X-Forwarded-Proto https
-	default_backend th3gr00t-tech-backend
+mode http
+option forwardfor
+reqadd X-Forwarded-Proto:\ https
+acl is_https ssl_fc
+http-request set-header X-Forwarded-Port %[dst_port]
 
-backend th3gr00t-tech-backend
-	balance roundrobin
-	server 453-web-01 35.243.128.200:80 check
-	server 453-web-02 3.239.120.96:80 check
+default_backend www-backend
+
+backend www-backend
+mode http
+option forwardfor
+option http-server-close
+option http-pretend-keepalive
+server web-01 18.210.13.28:80 check
+server web-02 54.158.80.47:80 check
+EOL
+
+# Restart HAProxy
+sudo service haproxy restart
